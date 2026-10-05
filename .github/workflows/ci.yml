@@ -1,19 +1,48 @@
-name: CI
+name: CI-CD
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: pixel-vault
+
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Build Docker image
         run: docker build -t pixel-vault .
-      - name: Run container
-        run: docker run -d -p 3000:3000 --name pv pixel-vault
+
       - name: Smoke test
         run: |
-          sleep 5
+          docker run -d -p 3000:3000 --name pv pixel-vault
+          sleep 8
           curl -f http://localhost:3000/api/games
+
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push image to ECR
+        if: github.event_name == 'push'
+        run: |
+          REGISTRY=${{ steps.ecr-login.outputs.registry }}
+          docker tag pixel-vault $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+          docker tag pixel-vault $REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+          docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
