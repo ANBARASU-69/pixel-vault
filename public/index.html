@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Vault</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Pixel Vault</h1>
+  <nav><button data-view="store">Store</button><button data-view="library">Library</button></nav>
+  <input id="search" type="search" placeholder="Search games" aria-label="Search games">
+  <span id="account"></span>
+  <button id="cartBtn">Cart (<span id="count">0</span>)</button>
+</header>
+<main id="view"></main>
+<aside id="cart"></aside>
+<div id="modal" hidden></div>
+<div id="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
