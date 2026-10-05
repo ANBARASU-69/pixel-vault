@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t pixel-vault .
+      - name: Run container
+        run: docker run -d -p 3000:3000 --name pv pixel-vault
+      - name: Smoke test
+        run: |
+          sleep 5
+          curl -f http://localhost:3000/api/games
