@@ -46,3 +46,22 @@ jobs:
           docker tag pixel-vault $REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:latest
           docker push $REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+
+      - name: Deploy to EC2 via SSM
+        if: github.event_name == 'push'
+        run: |
+          REGISTRY=${{ steps.ecr-login.outputs.registry }}
+          cat > params.json <<EOF
+          {"commands":[
+            "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $REGISTRY",
+            "docker pull $REGISTRY/pixel-vault:latest",
+            "docker rm -f pv || true",
+            "docker run -d -p 80:3000 -v pixelvault-data:/app/data --restart unless-stopped --name pv $REGISTRY/pixel-vault:latest"
+          ]}
+          EOF
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file://params.json \
+            --region us-east-1
